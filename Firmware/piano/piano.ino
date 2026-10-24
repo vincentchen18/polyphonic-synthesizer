@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <I2S.h>
 
 // key pins :)
 
@@ -11,6 +12,8 @@ const uint8_t KNOB_PIN = 26;
 // not keys anymore but still pins
 const uint8_t OLED_SDA = 16;
 const uint8_t OLED_SCL = 17;
+const uint8_t I2S_BCK = 18;
+const uint8_t I2S_DIN = 20; 
 
 // keys
 
@@ -52,6 +55,28 @@ bool screenDirty = true;
 int lastKnobTurned = -1;
 unsigned long knobTurnedAt = 0;
 unsigned long lastDraw = 0;
+
+// audio stuff
+const uint32_t SAMPLE_RATE = 22050;
+const int32_t ENV_MAX = 1 << 20;
+
+volatile int32_t sharedVolume = 128; // 0-256
+volatile int32_t sharedAttackStep = ENV_MAX;
+volatile int32_t sharedReleaseStep = ENV_MAX / 1000;
+
+I2S i2s(OUTPUT);
+const uint8_t NUM_VOICES = 8;
+int16_t sineTable[256];
+
+enum VoiceState {V_OFF, V_ATTACK, V_SUSTAIN, V_RELEASE};
+struct Voice {
+  VoiceState state = V_OFF;
+  uint8_t key=255;
+  uint32_t phase = 0;
+  uint32_t phaseInc = 0;
+  int32_t env=0;
+};
+Voice voices[NUM_VOICES];
 
 
 int knobStep(float v, int n) {
@@ -102,8 +127,10 @@ void scanKeys() {
         if (pressed) {
           heldNote[k] = BASE_NOTE + k + 12 * octave + transpose;
           Serial.print("DOWN ");
+          rp2040.fifo.push_nb((1u << 31) | (k << 8) | heldNote[k]); // which note is on
         } else {
           Serial.print("UP   ");
+          rp2040.fifo.push_nb(k << 8);
         }
         printNote(heldNote[k]); // i hate semicolons sm
         screenDirty = true;
@@ -112,6 +139,13 @@ void scanKeys() {
 
     digitalWrite(COL_PINS[c], LOW);
   }
+}
+
+int32_t envStep(float v, float minMs, float maxMs) {
+  float ms = minMs * powf(maxMs / minMs, v);
+  float samples = ms * SAMPLE_RATE / 1000.0f;
+  int32_t step = (int32_t)(ENV_MAX / samples);
+  return step = 1 ? 1: step;
 }
 
 void readKnobs() {
@@ -163,6 +197,10 @@ void readKnobs() {
       screenDirty = true;
     }
   }
+
+  sharedVolume = (int32_t)(knob[K_VOLUME] * 256);
+  sharedAttackStep = envStep(knob[K_ATTACK], 2, 1500);
+  sharedReleaseStep = envStep(knob[K_RELEASE], 20, 3000);
 }
 
 void printSigned(int v) {
@@ -224,4 +262,95 @@ void loop() {
   }
 
   delay(1);
+}
+
+void setup1() {
+  for (int i=0; i<256; i++) {
+    sineTable[i] = (int16_t)(32767 * sinf(2*PI*i/256.0f));
+  }
+  i2s.setBCLK(I2S_BCK);
+  i2s.setDATA(I2S_DIN);
+  i2s.setBitsPerSample(16);
+  i2s.begin(SAMPLE_RATE);
+}
+
+void noteOn(uint8_t key, uint8_t note) {
+  int pick = -1;
+  for (int v=0; v<NUM_VOICES; v++) {
+    if (voices[v].state == V_OFF) {
+      pick = v;
+      break;
+    }
+  }
+  if (pick < 0) {
+    int32_t quietest = ENV_MAX + 1;
+    for (int v=0; v<NUM_VOICES; v++) {
+      if (voices[v].state == V_RELEASE && voices[v].env < quietest) {
+        quietest = voices[v].env;
+        pick = v;
+      }
+    }
+  }
+  if (pick < 0) pick = 0;
+
+  float frequency = 440.0f * powf(2.0f, (note-69) / 12.0f);
+  Voice &vo = voices[pick];
+  vo.key = key;
+  vo.phase = 0;
+  vo.phaseInc = (uint32_t)(frequency * 4294967296.0f / SAMPLE_RATE);
+  vo.env = 0;
+  vo.state = V_ATTACK;
+
+}
+
+void noteOff(uint8_t key) {
+  for (int v=0; v<NUM_VOICES; v++) {
+    if (voices[v].key == key && (voices[v].state == V_ATTACK || voices[v].state == V_SUSTAIN)) {
+      voices[v].state = V_RELEASE;
+    }
+  }
+}
+
+void loop1() {
+  uint32_t msg;
+  while (rp2040.fifo.pop_nb(&msg)) {
+    uint8_t key = (msg >> 8) & 0xFF;
+    if (msg >> 31) noteOn(key, msg&0xFF);
+    else noteOff(key);
+  }
+  int32_t attackStep = sharedAttackStep;
+  int32_t releaseStep = sharedReleaseStep;
+  int32_t volume = sharedVolume;
+
+  for (int n=0; n<64; n++) {
+    int32_t mix = 0;
+    for (int v=0; v < NUM_VOICES; v++) {
+      Voice &vo = voices[v];
+      if (vo.state == V_OFF) continue;
+      if (vo.state == V_ATTACK) {
+        vo.env += attackStep;
+        if (vo.env >= ENV_MAX) {
+          vo.env = ENV_MAX; 
+          vo.state = V_SUSTAIN;
+        }
+      } else if (vo.state == V_RELEASE) {
+        vo.env -= releaseStep;
+        if (vo.env <= 0) {
+          vo.env=0;
+          vo.state = V_OFF;
+          continue;
+        } 
+      }
+
+      // sine oscillator
+      int32_t s = sineTable[vo.phase >> 24];
+      vo.phase += vo.phaseInc;
+      mix += (s*(vo.env>>5)) >> 15;
+    }
+    mix = (mix >> 2) * volume >> 8;
+    // safety limits
+    if (mix > 32767) mix  = 32767;
+    if (mix<-32768) mix  = -32768;
+    i2s.write16((int16_t)mix, (int16_t)mix);
+  }
 }
