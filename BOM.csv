@@ -1,7 +1,6 @@
-Item,Purpose,Qty,Price,Currency,Source,Link
-Custom PCB 300x90mm 2-layer (incl. shipping; $5 JLCONE coupon),Main board,5,23.25,USD,JLCPCB,https://jlcpcb.com
-USB-C receptacle HRO TYPE-C-31-M-12 (C165948),Power + USB data,5,0.87,USD,LCSC,https://www.lcsc.com/product-detail/C165948.html
-SMAJ5.0CA TVS diode (C908809),USB ESD protection,20,0.61,USD,LCSC,https://www.lcsc.com/product-detail/C908809.html
-SMD1206-050-16 500mA polyfuse (C46641014),USB overcurrent protection,10,0.43,USD,LCSC,https://www.lcsc.com/product-detail/C46641014.html
-Raspberry Pi Pico RP2040 (micro USB) + free knob caps (incl. GST),Microcontroller,1,3.16,USD,AliExpress,https://www.aliexpress.com/item/1005004565422217.html
-TOTAL,,,28.32,USD,,
+Part,Qty,Unit,Vendor,Link
+Custom PCB 300x90mm 2-layer (after $5 JLCONE coupon),5,2.42,JLCPCB,https://jlcpcb.com
+USB-C receptacle HRO TYPE-C-31-M-12 (C165948),5,0.174,LCSC,https://www.lcsc.com/product-detail/C165948.html
+SMAJ5.0CA TVS diode (C908809),20,0.0305,LCSC,https://www.lcsc.com/product-detail/C908809.html
+SMD1206-050-16 500mA polyfuse (C46641014),10,0.043,LCSC,https://www.lcsc.com/product-detail/C46641014.html
+Raspberry Pi Pico RP2040 micro USB (incl. GST),1,3.16,AliExpress,https://www.aliexpress.com/item/1005004565422217.html
