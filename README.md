@@ -88,18 +88,18 @@ No AI used in this project.
 
 ### Paid out of pocket
 
-| Item | Purpose | Qty | Price | Source |
-|---|---|---|---|---|
-| Gateron G Pro 3.0 MX switches (30pc) | Keys (25 needed, 8 leftover from Starbie) | 1 pack | AU$5.49 | [AliExpress](https://www.aliexpress.com/item/1005010559544082.html) |
-| 1N4148 DO-35 diodes (50pc) | Key matrix anti-ghosting | 1 pack | AU$2.83 | [AliExpress](https://www.aliexpress.com/item/1005012020521505.html) |
-| RV09 10K vertical potentiometers (5pc) | 8 control knobs | 2 packs | AU$2.78 | [AliExpress](https://www.aliexpress.com/item/1871188517.html) |
-| CD4051BE DIP-16 | Analog mux for the 8 knobs | 1 | AU$2.44 | [AliExpress](https://www.aliexpress.com/item/1005012399429493.html) |
-| 0.96" I2C OLED 128x64 | Display | 1 | AU$3.74 | [AliExpress](https://www.aliexpress.com/item/1005009784993412.html) |
-| GY-PCM5102 I2S DAC module | Audio DAC + headphone jack | 1 | AU$4.19 | [AliExpress](https://www.aliexpress.com/item/1005005692721202.html) |
-| PAM8302A CJMCU-832 amp module | Speaker amplifier | 1 | AU$2.50 | [AliExpress](https://www.aliexpress.com/item/1005007274382818.html) |
-| 8Ω 1W 28mm speaker (2pc) | Speaker | 1 pack | AU$4.60 | [AliExpress](https://www.aliexpress.com/item/1005009051447480.html) |
-| 10% GST | Tax | — | AU$2.86 | — |
-| **Out-of-pocket total** | | | **AU$31.43 (US$21.98)** | |
+| Item | Purpose                                                                              | Qty | Price | Source |
+|---|--------------------------------------------------------------------------------------|---|---|---|
+| Gateron G Pro 3.0 MX switches (30pc) | Keys (25 needed, 8 leftover from [Starbie](https://github.com/vincentchen18/starbie)) | 1 pack | AU$5.49 | [AliExpress](https://www.aliexpress.com/item/1005010559544082.html) |
+| 1N4148 DO-35 diodes (50pc) | Key matrix anti-ghosting                                                             | 1 pack | AU$2.83 | [AliExpress](https://www.aliexpress.com/item/1005012020521505.html) |
+| RV09 10K vertical potentiometers (5pc) | 8 control knobs                                                                      | 2 packs | AU$2.78 | [AliExpress](https://www.aliexpress.com/item/1871188517.html) |
+| CD4051BE DIP-16 | Analog mux for the 8 knobs                                                           | 1 | AU$2.44 | [AliExpress](https://www.aliexpress.com/item/1005012399429493.html) |
+| 0.96" I2C OLED 128x64 | Display                                                                              | 1 | AU$3.74 | [AliExpress](https://www.aliexpress.com/item/1005009784993412.html) |
+| GY-PCM5102 I2S DAC module | Audio DAC + headphone jack                                                           | 1 | AU$4.19 | [AliExpress](https://www.aliexpress.com/item/1005005692721202.html) |
+| PAM8302A CJMCU-832 amp module | Speaker amplifier                                                                    | 1 | AU$2.50 | [AliExpress](https://www.aliexpress.com/item/1005007274382818.html) |
+| 8Ω 1W 28mm speaker (2pc) | Speaker                                                                              | 1 pack | AU$4.60 | [AliExpress](https://www.aliexpress.com/item/1005009051447480.html) |
+| 10% GST | Tax                                                                                  | — | AU$2.86 | — |
+| **Out-of-pocket total** |                                                                                      | | **AU$31.43 (US$21.98)** | |
 
 ### Already owned
 
