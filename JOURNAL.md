@@ -10,7 +10,7 @@
 
 | Week | Tier | Hours logged | Entries |
 | --- | --- | --- | --- |
-| Week 3 | Tier 1 | 13.54h | 10 |
+| Week 3 | Tier 1 | 13.64h | 10 |
 
 ## Contents
 
@@ -131,8 +131,8 @@ more firmware coding this session, wired in teh main sound engine with 8 note po
 
 ### 2026-10-25 – finishing firmware, and i programmed in the last few knobs, especially the instrument one took a long time because i had to change the sound oscillations, but anyways i got it done. I also labelled th
 
-**0.98h**
+**1.08h**
 
-finishing firmware, and i programmed in the last few knobs, especially the instrument one took a long time because i had to change the sound oscillations, but anyways i got it done. I also labelled the knobs on silkscreen in the pcb editor
+finishing firmware, and i programmed in the last few knobs, especially the instrument one took a long time because i had to change the sound oscillations, but anyways i got it done. I also labelled the knobs on silkscreen in the pcb editor. + some readme updates
 
 [Timelapse](https://lookout.hackclub.com/api/media/58100256-204e-41f8-af99-a2ab4ca975ee/video.mp4)
