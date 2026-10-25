@@ -61,6 +61,10 @@ I dont even have much to say here, it's just a regular piano?? If you're seeing 
 
 - The OLED shows the current instrument, octave and transpose, a bar when you turn a knob, and the notes you're holding.
 
+## 3D models
+
+The 3d modelling was made in onshape. Find the editable model at this link: [https://cad.onshape.com/documents/eaea6aaede962270a3775490/w/8b0d608019392835e9ec1b16/e/e5c3a90dd200dcba6fe43490?renderMode=0&uiState=6adddfe965922c75c7df5742](https://cad.onshape.com/documents/eaea6aaede962270a3775490/w/8b0d608019392835e9ec1b16/e/e5c3a90dd200dcba6fe43490?renderMode=0&uiState=6adddfe965922c75c7df5742)
+
 ## Firmware
 
 The Firmware for this project is programmed in Arduino IDE.
