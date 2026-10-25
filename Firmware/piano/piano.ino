@@ -63,18 +63,39 @@ const int32_t ENV_MAX = 1 << 20;
 volatile int32_t sharedVolume = 128; // 0-256
 volatile int32_t sharedAttackStep = ENV_MAX;
 volatile int32_t sharedReleaseStep = ENV_MAX / 1000;
+volatile int32_t sharedInstrument = 0;
+volatile int32_t sharedToneCoef = 32767;
+volatile int32_t sharedEchoWet = 0;
+volatile int32_t sharedEchoFb;
 
 I2S i2s(OUTPUT);
 const uint8_t NUM_VOICES = 8;
 int16_t sineTable[256];
+int16_t pianoTable[256];
+int16_t organTable[256];
+
+const uint16_t KS_MAX = 1024;
+int16_t ksBuf[NUM_VOICES][KS_MAX];
+
+const uint16_t ECHO_LEN = SAMPLE_RATE / 4;
+int16_t echoBuf[ECHO_LEN];
+uint16_t echoIdx = 0;
+int32_t toneLp = 0;
+uint32_t rng = 12345;
 
 enum VoiceState {V_OFF, V_ATTACK, V_SUSTAIN, V_RELEASE};
 struct Voice {
   VoiceState state = V_OFF;
   uint8_t key=255;
+  uint8_t inst = 0;
   uint32_t phase = 0;
   uint32_t phaseInc = 0;
   int32_t env=0;
+  uint32_t modPhase = 0;
+  int32_t modIndex = 0; // clangyness
+  uint16_t ksLen = 0; // pluck
+  uint16_t ksIdx = 0;
+  uint32_t modInc=0;
 };
 Voice voices[NUM_VOICES];
 
@@ -145,7 +166,7 @@ int32_t envStep(float v, float minMs, float maxMs) {
   float ms = minMs * powf(maxMs / minMs, v);
   float samples = ms * SAMPLE_RATE / 1000.0f;
   int32_t step = (int32_t)(ENV_MAX / samples);
-  return step = 1 ? 1: step;
+  return step < 1 ? 1: step;
 }
 
 void readKnobs() {
@@ -201,6 +222,10 @@ void readKnobs() {
   sharedVolume = (int32_t)(knob[K_VOLUME] * 256);
   sharedAttackStep = envStep(knob[K_ATTACK], 2, 1500);
   sharedReleaseStep = envStep(knob[K_RELEASE], 20, 3000);
+  sharedInstrument = instrument;
+  sharedToneCoef = (int32_t)(32767 * powf(0.06f, 1.0f - knob[K_TONE])); // dark -> bright
+  sharedEchoWet = (int32_t)(knob[K_ECHO] * 16383); // up to 50% echo
+  sharedEchoFb = (int32_t)(knob[K_ECHO] * 19660); // up to 60% repeats
 }
 
 void printSigned(int v) {
@@ -264,10 +289,34 @@ void loop() {
   delay(1);
 }
 
-void setup1() {
-  for (int i=0; i<256; i++) {
-    sineTable[i] = (int16_t)(32767 * sinf(2*PI*i/256.0f));
+void buildTable(int16_t *table, const  float *amps, int numHarm) {
+  float tmp[256];
+  float peak = 0;
+  for (int i=0; i < 256; i++) {
+    float x= 2*PI*i / 256.0f;
+    float s= 0;
+    for (int h=0; h<numHarm; h++) {
+      s += amps[h] * sinf((h+1) *x);
+    }
+    tmp[i] = s;
+    if (fabsf(s) > peak) {
+      peak = fabsf(s);
+    }
+    
   }
+  for (int i=0; i<256; i++) {
+      table[i] = (int16_t)(30000 * tmp[i] / peak);
+  }
+
+}
+
+void setup1() {
+  const float sineAmps[] = {1.0f};
+  const float pianoAmps[] = {1.0f, 0.5f, 0.25f, 0.12f, 0.06f};
+  const float organAmps[] = {1.0f, 0.8f, 0.6f, 0.5f, 0.0f, 0.3f, 0.0f, 0.2f};
+  buildTable(sineTable, sineAmps, 1);
+  buildTable(pianoTable, pianoAmps, 5);
+  buildTable(organTable, organAmps, 8);
   i2s.setBCLK(I2S_BCK);
   i2s.setDATA(I2S_DIN);
   i2s.setBitsPerSample(16);
@@ -296,11 +345,31 @@ void noteOn(uint8_t key, uint8_t note) {
   float frequency = 440.0f * powf(2.0f, (note-69) / 12.0f);
   Voice &vo = voices[pick];
   vo.key = key;
+  vo.inst = sharedInstrument;
   vo.phase = 0;
   vo.phaseInc = (uint32_t)(frequency * 4294967296.0f / SAMPLE_RATE);
-  vo.env = 0;
-  vo.state = V_ATTACK;
+  vo.modPhase = 0;
+  vo.modInc = vo.phaseInc * 3 + vo.phaseInc / 2;
+  vo.modIndex = 32767;
 
+  if (vo.inst == 2) {
+    // special ringing for pluck
+    uint16_t len = (uint16_t)(SAMPLE_RATE / frequency + 0.5f);
+    if (len < 2) len = 2;
+    if (len > KS_MAX) len = KS_MAX;
+    vo.ksLen = len;
+    vo.ksIdx = 0;
+    for (uint16_t i=0; i<len ; i++) {
+      rng = rng* 1664525u + 1013904223u;
+      ksBuf[pick][i] = (int16_t)(rng >> 16) >> 1;
+    }
+    vo.env = ENV_MAX;
+    vo.state = V_SUSTAIN;
+
+  } else {
+    vo.env = 0;
+    vo.state = V_ATTACK;
+  }
 }
 
 void noteOff(uint8_t key) {
@@ -321,6 +390,9 @@ void loop1() {
   int32_t attackStep = sharedAttackStep;
   int32_t releaseStep = sharedReleaseStep;
   int32_t volume = sharedVolume;
+  int32_t toneCoef = sharedToneCoef;
+  int32_t echoWet = sharedEchoWet;
+  int32_t echoFb = sharedEchoFb;
 
   for (int n=0; n<64; n++) {
     int32_t mix = 0;
@@ -333,6 +405,9 @@ void loop1() {
           vo.env = ENV_MAX; 
           vo.state = V_SUSTAIN;
         }
+      } else if (vo.state == V_SUSTAIN) {
+        if (vo.inst == 0) vo.env -= vo.env >> 15;
+        else if (vo.inst == 3) vo.env -= vo.env >> 14; // different ringing sounds for piano/bell
       } else if (vo.state == V_RELEASE) {
         vo.env -= releaseStep;
         if (vo.env <= 0) {
@@ -342,15 +417,57 @@ void loop1() {
         } 
       }
 
-      // sine oscillator
-      int32_t s = sineTable[vo.phase >> 24];
+      // different oscilaltor for difernt instruments
+      int32_t s;
+      switch (vo.inst) {
+        case 0: // puano
+          s = pianoTable[vo.phase >> 24];
+          break;
+        case 1:
+          s = organTable[vo.phase >> 24];
+          break;
+        case 2: {
+          uint16_t nxt = vo.ksIdx + 1;
+          if (nxt >= vo.ksLen) nxt = 0;
+          int32_t a = ksBuf[v][vo.ksIdx];
+          int32_t b = ksBuf[v][nxt];
+          ksBuf[v][vo.ksIdx] = (int16_t)((((a + b) >> 1) * 32604) >> 15);
+          vo.ksIdx = nxt;
+          s = a*2;
+          break;
+        }
+        case 3: {
+          int32_t m = sineTable[vo.modPhase >> 24];
+          vo.modPhase += vo.modInc;
+          s = sineTable[(vo.phase + (uint32_t)(m * (vo.modIndex >> 1))) >> 24];
+          vo.modIndex -= vo.modIndex >> 12;
+          break;
+        }
+        default:
+          s = (vo.phase < 0x40000000u) ? 12000 : -12000;
+          break;
+      }
       vo.phase += vo.phaseInc;
-      mix += (s*(vo.env>>5)) >> 15;
+      mix += (s * (vo.env >> 5)) >> 15;
+
     }
-    mix = (mix >> 2) * volume >> 8;
-    // safety limits
-    if (mix > 32767) mix  = 32767;
-    if (mix<-32768) mix  = -32768;
-    i2s.write16((int16_t)mix, (int16_t)mix);
+    mix >>=2;
+    //tone
+    toneLp += (int32_t)(((int64_t)(mix-toneLp)*toneCoef)>>15);
+    int32_t out = toneLp;
+
+    // echo logic;
+    int32_t past = echoBuf[echoIdx];
+    out += (past * echoWet) >> 15;
+    int32_t fb = toneLp + ((past * echoFb) >> 15);
+    if (fb > 32767) fb = 32767;
+    if (fb < -32768) fb = -32768;
+    echoBuf[echoIdx] = (int16_t)fb;
+    if (++echoIdx >= ECHO_LEN) echoIdx = 0;
+
+    out = out*volume >> 8;
+    if (out > 32767) out = 32767;
+    if (out < -32768) out = -32768;
+    i2s.write16((int16_t)out, (int16_t)out);
   }
 }

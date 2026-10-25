@@ -46,7 +46,20 @@ I dont even have much to say here, it's just a regular piano?? If you're seeing 
 
 - Optional Ear/Headphone support (there's an audio jack but you don't need to use it. unfortunately no bluetooth support :C)
 - Feels like an actual electronic keyboard (cos of the keyswitches =DDD)
-- Adjustable knobs (i will update this section of the readme when i am done programming firmware)
+- Adjustable knobs (edit: im done programming firmware! :3)
+
+| Knob | What it does                                                                             |
+|---|------------------------------------------------------------------------------------------|
+| **Volume** | how loud the thingy is                                                                   |
+| **Instrument** | switches between 5 sounds: Piano, Organ, Pluck, Bell and 8-bit                           |
+| **Tone** | makes it darker or brighter, like turning the treble down/up                             |
+| **Attack** | how fast a note fades in, turn up for a swell similar to a violin                        |
+| **Release** | basically a damper pedal                                                                 |
+| **Echo** | adds repeating echoes                                                                    |
+| **Octave** | shifts the keyboard +/- 2 octaves so you can basically get the range of the entire piano |
+| **Transpose** | shifts every note +/- 6 semitones in case you get bored of your key                      |
+
+- The OLED shows the current instrument, octave and transpose, a bar when you turn a knob, and the notes you're holding.
 
 ## Firmware
 
